@@ -1,0 +1,585 @@
+<!DOCTYPE html><html lang="zh-HK"><head><meta charset="UTF-8"><title>預覽內容</title><style>body{font-family:sans-serif;line-height:1.6;padding:1rem;color:#1f2937;background:#f0f0f0;}h1,h2,h3{font-weight:bold;margin-bottom:1rem;margin-top:1.5rem;}h1{font-size:2em;}h2{font-size:1.5em;}h3{font-size:1.17em;}p,ul,ol{margin-bottom:1rem;}ul,ol{padding-left:1.5rem;}a{color:#2563eb;}</style></head><body><!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>香仔交通報時器 V7.6.9</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        
+        :root {
+            --kmb-red: #ef4444;
+            --mtr-blue: #3b82f6;
+        }
+
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(239, 68, 68, 0.03) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.03) 0px, transparent 50%);
+            min-height: 100vh;
+            color: #1e293b;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .fancy-card {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .delete-fav-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 28px;
+            height: 28px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 900;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            z-index: 50;
+            border: 3px solid white;
+        }
+
+        .sort-btn {
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 10px 16px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #64748b;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .edit-active-bg {
+            background: #3b82f6 !important;
+            border-color: #2563eb !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        @keyframes pulse-shimmer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .loading-shimmer { animation: pulse-shimmer 2s infinite; }
+
+        .eta-preview-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 900;
+            padding: 4px 8px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 8px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body class="pb-24">
+
+    <!-- Header -->
+    <nav class="sticky top-0 z-[60] glass shadow-sm px-6 py-5 flex justify-between items-center border-b border-white/40">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-br from-red-500 to-rose-600 p-2.5 rounded-2xl shadow-lg rotate-3">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-tight text-gray-800 leading-none">HK<span class="text-red-500">.ETA</span></h1>
+                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">V7.6.9 FIDELITY</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="editToggleBtn" onclick="toggleEditMode()" class="sort-btn">
+                <span id="editToggleText">編輯排序</span>
+            </button>
+            <button onclick="toggleSyncPanel()" class="w-11 h-11 flex items-center justify-center rounded-2xl bg-white shadow-sm border border-gray-100 text-gray-400 active:bg-gray-50">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+            </button>
+        </div>
+    </nav>
+
+    <div class="max-w-md mx-auto p-5">
+        
+        <!-- Mode Switcher -->
+        <div class="relative flex glass p-1.5 rounded-[2rem] mb-10 shadow-lg border border-white/60">
+            <button id="mode-bus" onclick="setMode('bus')" class="relative z-10 flex-1 py-4 rounded-[1.5rem] font-black text-xs transition-all text-white">巴士 KMB</button>
+            <button id="mode-mtr" onclick="setMode('mtr')" class="relative z-10 flex-1 py-4 rounded-[1.5rem] font-black text-xs transition-all text-gray-400">地鐵 MTR</button>
+            <div id="mode-bg" class="absolute top-1.5 left-1.5 bottom-1.5 w-[calc(50%-6px)] bg-red-500 rounded-[1.5rem] transition-all duration-300 shadow-md"></div>
+        </div>
+
+        <!-- Sync Panel -->
+        <div id="syncPanel" class="hidden glass rounded-[2.5rem] p-7 shadow-2xl mb-10 border border-white/60 animate-in fade-in slide-in-from-top-4">
+            <h3 class="font-bold text-gray-800 mb-5">雲端同步 ID</h3>
+            <div class="space-y-4">
+                <input id="userIdDisplay" readonly type="text" class="w-full bg-white/50 p-4 rounded-2xl border border-gray-100 text-sm font-mono text-gray-500">
+                <div class="flex gap-2">
+                    <input id="userIdInput" type="text" placeholder="貼上 ID 同步" class="flex-1 bg-white border border-gray-100 rounded-2xl px-5 py-4 text-sm font-mono outline-none focus:ring-2 ring-blue-100">
+                    <button onclick="manualSync()" class="bg-gray-800 text-white text-xs px-6 rounded-2xl font-black active:scale-95 transition-all">同步</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Favorites Section -->
+        <div id="favoritesSection" class="mb-10 hidden">
+            <div class="flex justify-between items-center mb-5 px-3">
+                <h2 class="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em]">常用路線 ⭐</h2>
+                <div id="favLoadingStatus" class="text-[9px] font-bold text-blue-500 hidden">更新中...</div>
+            </div>
+            <div id="favoritesList" class="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x relative min-h-[140px]"></div>
+        </div>
+
+        <!-- Bus Search -->
+        <div id="busSearchSection" class="mb-12">
+            <div class="glass rounded-[2.5rem] p-2 shadow-xl border border-white/60 flex items-center gap-2 pr-4 pl-6 h-20">
+                <input id="routeInput" type="text" placeholder="輸入路線 (e.g. 290, 98D)" 
+                       onkeypress="if(event.key === 'Enter') searchRoute()" 
+                       class="flex-1 bg-transparent font-black text-2xl text-gray-700 outline-none placeholder:text-gray-300">
+                <button onclick="searchRoute()" class="bg-gradient-to-br from-red-500 to-rose-600 text-white w-14 h-14 rounded-[1.5rem] flex items-center justify-center shadow-lg active:scale-90 transition-all flex-shrink-0">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- MTR Lines -->
+        <div id="mtrLineSection" class="hidden space-y-5 mb-12">
+            <h2 class="text-[11px] text-gray-400 font-black px-4 uppercase tracking-[0.3em]">地鐵網絡 MTR</h2>
+            <div id="mtrLines" class="grid grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- Status Box -->
+        <div id="statusBox" class="hidden text-center py-16 glass rounded-[3rem] shadow-2xl mb-12 animate-pulse">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-red-500 border-t-transparent mx-auto mb-6"></div>
+            <p id="statusText" class="text-gray-500 font-black px-10"></p>
+        </div>
+
+        <div id="directionSection" class="hidden space-y-4 mb-12"></div>
+        <div id="stopListSection" class="hidden">
+            <div class="flex justify-between items-center mb-8 px-3">
+                <h2 id="stopListTitle" class="font-black text-gray-900 text-2xl tracking-tight">車站清單</h2>
+                <button onclick="resetApp()" class="bg-white text-gray-400 text-[10px] font-black uppercase px-5 py-3 rounded-2xl shadow-sm border border-gray-100 active:bg-gray-50">返回</button>
+            </div>
+            <div id="stopList" class="space-y-4 text-left"></div>
+        </div>
+    </div>
+
+    <!-- ETA Modal -->
+    <div id="etaModal" class="hidden fixed inset-0 z-[100] flex items-end justify-center p-0">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="relative bg-white w-full max-w-md rounded-t-[3.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full duration-300">
+            <div id="modalHeader" class="p-10 text-white relative transition-colors duration-500">
+                <button onclick="closeModal()" class="absolute top-8 right-8 w-12 h-12 flex items-center justify-center rounded-2xl bg-white/20 active:scale-90 transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+                <div class="flex items-center gap-3 mb-4">
+                    <span id="modalRouteName" class="bg-white/30 px-5 py-2 rounded-xl text-xs font-black tracking-widest uppercase"></span>
+                </div>
+                <h3 id="modalStopName" class="text-3xl font-black leading-tight">---</h3>
+            </div>
+            <div id="etaContent" class="p-8 pb-12 space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar bg-slate-50/50"></div>
+            <div class="p-8 bg-white border-t border-gray-100">
+                <button onclick="closeModal()" class="w-full py-5 bg-gray-900 text-white rounded-[2rem] font-black text-sm shadow-xl active:scale-95 transition-all">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        window.db = db;
+        window.appId = appId;
+        window.favorites = [];
+
+        onAuthStateChanged(auth, (u) => {
+            if (u) {
+                let syncId = localStorage.getItem('bus_sync_id') || u.uid;
+                localStorage.setItem('bus_sync_id', syncId);
+                document.getElementById('userIdDisplay').value = syncId;
+                setupFavoritesListener(syncId);
+            }
+        });
+
+        function setupFavoritesListener(uid) {
+            const favRef = collection(db, 'artifacts', appId, 'users', uid, 'favorites');
+            onSnapshot(favRef, (snapshot) => {
+                window.favorites = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderFavorites();
+            }, (err) => console.error("Firestore Listen Error:", err));
+        }
+
+        window.toggleFavorite = async (data) => {
+            const uid = localStorage.getItem('bus_sync_id');
+            const docId = data.type === 'mtr' ? `mtr_${data.line}_${data.station}` : `bus_${data.route}_${data.stopId}`;
+            const favDoc = doc(db, 'artifacts', appId, 'users', uid, 'favorites', docId);
+            
+            const isCurrentlyFav = window.favorites.some(f => f.id === docId);
+            if (isCurrentlyFav) {
+                await deleteDoc(favDoc);
+            } else {
+                const maxOrder = window.favorites.length > 0 ? Math.max(...window.favorites.map(f => f.order || 0)) : 0;
+                await setDoc(favDoc, { ...data, timestamp: Date.now(), order: maxOrder + 1 });
+            }
+        };
+
+        window.saveNewOrder = async (newSortedList) => {
+            const uid = localStorage.getItem('bus_sync_id');
+            const batch = writeBatch(db);
+            newSortedList.forEach((item, index) => {
+                const ref = doc(db, 'artifacts', appId, 'users', uid, 'favorites', item.id);
+                batch.update(ref, { order: index });
+            });
+            await batch.commit();
+        };
+
+        const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
+        initAuth();
+    </script>
+
+    <script>
+        window.currentMode = 'bus';
+        window.isEditMode = false;
+
+        async function apiFetch(url, retries = 3, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('HTTP Error');
+                    return await response.json();
+                } catch (err) {
+                    if (i === retries - 1) throw err;
+                    await new Promise(r => setTimeout(r, delay * (i + 1)));
+                }
+            }
+        }
+
+        const mtrConfig = {
+            lines: [
+                { code: 'KTL', name: '觀塘綫', color: '#00ab4e' },
+                { code: 'TWL', name: '荃灣綫', color: '#ed1d24' },
+                { code: 'ISL', name: '港島綫', color: '#007dc5' },
+                { code: 'TKL', name: '將軍澳綫', color: '#a35eb5' },
+                { code: 'TML', name: '屯馬綫', color: '#9a3820' },
+                { code: 'EAL', name: '東鐵綫', color: '#5eb3e4' },
+                { code: 'TCL', name: '東涌綫', color: '#ff9233' },
+                { code: 'AEL', name: '機場快綫', color: '#007078' },
+                { code: 'SIL', name: '南港島綫', color: '#b5bd00' }
+            ],
+            stations: {
+                'KTL': [{c:'WHA',n:'黃埔'},{c:'HOM',n:'何文田'},{c:'YMT',n:'油麻地'},{c:'MOK',n:'旺角'},{c:'PRE',n:'太子'},{c:'SKM',n:'石硤尾'},{c:'KOT',n:'九龍塘'},{c:'LOF',n:'樂富'},{c:'WTS',n:'黃大仙'},{c:'CHH',n:'彩虹'},{c:'DIW',n:'鑽石山'},{c:'KOB',n:'九龍灣'},{c:'NTK',n:'牛頭角'},{c:'KWT',n:'觀塘'},{c:'LAT',n:'藍田'},{c:'YAT',n:'油塘'},{c:'TIK',n:'調景嶺'}],
+                'TWL': [{c:'CEN',n:'中環'},{c:'ADM',n:'金鐘'},{c:'TST',n:'尖沙咀'},{c:'JOR',n:'佐敦'},{c:'YMT',n:'油麻地'},{c:'MOK',n:'旺角'},{c:'PRE',n:'太子'},{c:'SSP',n:'深水埗'},{c:'CSW',n:'長沙灣'},{c:'LCK',n:'荔枝角'},{c:'MEF',n:'美孚'},{c:'LAK',n:'荔景'},{c:'KWF',n:'葵芳'},{c:'KWH',n:'葵興'},{c:'TWH',n:'大窩口'},{c:'TSW',n:'荃灣'}],
+                'ISL': [{c:'KET',n:'堅尼地城'},{c:'HKU',n:'香港大學'},{c:'SYP',n:'西營盤'},{c:'SHW',n:'上環'},{c:'CEN',n:'中環'},{c:'ADM',n:'金鐘'},{c:'WAC',n:'灣仔'},{c:'CAB',n:'銅鑼灣'},{c:'TIH',n:'天后'},{c:'FOH',n:'炮台山'},{c:'NOP',n:'北角'},{c:'QUB',n:'鰂魚涌'},{c:'TAK',n:'太古'},{c:'SWH',n:'西灣河'},{c:'SKW',n:'筲箕灣'},{c:'HFC',n:'杏花邨'},{c:'CHW',n:'柴灣'}],
+                'TKL': [{c:'NOP',n:'北角'},{c:'QUB',n:'鰂魚涌'},{c:'YAT',n:'油塘'},{c:'TIK',n:'調景嶺'},{c:'TKO',n:'將軍澳'},{c:'LHP',n:'康城'},{c:'HAH',n:'坑口'},{c:'POA',n:'寶琳'}],
+                'TML': [{c:'WKS',n:'烏溪沙'},{c:'MOS',n:'馬鞍山'},{c:'HEO',n:'恆安'},{c:'TSH',n:'大水坑'},{c:'SHM',n:'石門'},{c:'CIO',n:'第一城'},{c:'STW',n:'沙田圍'},{c:'CKW',n:'車公廟'},{c:'TAI',n:'大圍'},{c:'HIK',n:'顯徑'},{c:'DIW',n:'鑽石山'},{c:'KAT',n:'啟德'},{c:'SUW',n:'宋皇臺'},{c:'TKW',n:'土瓜灣'},{c:'HOM',n:'何文田'},{c:'HUH',n:'紅磡'},{c:'ETS',n:'尖東'},{c:'AUS',n:'柯士甸'},{c:'NAC',n:'南昌'},{c:'MEF',n:'美孚'},{c:'TWW',n:'荃灣西'},{c:'KSR',n:'錦上路'},{c:'YUL',n:'元朗'},{c:'LOP',n:'朗屏'},{c:'TIS',n:'天水圍'},{c:'SIH',n:'兆康'},{c:'TUM',n:'屯門'}],
+                'EAL': [{c:'ADM',n:'金鐘'},{c:'EXC',n:'會展'},{c:'HUH',n:'紅磡'},{c:'MKK',n:'旺角東'},{c:'KOT',n:'九龍塘'},{c:'TAI',n:'大圍'},{c:'SHT',n:'沙田'},{c:'FOT',n:'火炭'},{c:'RAC',n:'馬場'},{c:'UNI',n:'大學'},{c:'TAP',n:'大埔墟'},{c:'TWO',n:'太和'},{c:'FAN',n:'粉嶺'},{c:'SHS',n:'上水'},{c:'LOW',n:'羅湖'},{c:'LMC',n:'落馬洲'}],
+                'TCL': [{c:'HOK',n:'香港'},{c:'KOW',n:'九龍'},{c:'OLY',n:'奧運'},{c:'NAC',n:'南昌'},{c:'LAK',n:'荔景'},{c:'TSY',n:'青衣'},{c:'SUN',n:'欣澳'},{c:'TUC',n:'東涌'}],
+                'AEL': [{c:'HOK',n:'香港'},{c:'KOW',n:'九龍'},{c:'TSY',n:'青衣'},{c:'AIR',n:'機場'},{c:'AWE',n:'博覽館'}],
+                'SIL': [{c:'ADM',n:'金鐘'},{c:'OCP',n:'海洋公園'},{c:'WCH',n:'黃竹坑'},{c:'LET',n:'利東'},{c:'SOH',n:'海怡半島'}]
+            }
+        };
+
+        const stationLookup = {};
+        Object.values(mtrConfig.stations).forEach(stops => stops.forEach(s => stationLookup[s.c] = s.n));
+
+        function setMode(mode) {
+            window.currentMode = mode;
+            const bg = document.getElementById('mode-bg');
+            bg.style.left = mode === 'bus' ? '6px' : '50%';
+            bg.style.backgroundColor = mode === 'bus' ? '#ef4444' : '#3b82f6';
+            document.getElementById('mode-bus').classList.toggle('text-white', mode === 'bus');
+            document.getElementById('mode-bus').classList.toggle('text-gray-400', mode !== 'bus');
+            document.getElementById('mode-mtr').classList.toggle('text-white', mode === 'mtr');
+            document.getElementById('mode-mtr').classList.toggle('text-gray-400', mode !== 'mtr');
+            document.getElementById('busSearchSection').classList.toggle('hidden', mode !== 'bus');
+            document.getElementById('mtrLineSection').classList.toggle('hidden', mode !== 'mtr');
+            resetApp();
+            if (mode === 'mtr') renderMtrLines();
+        }
+
+        function renderMtrLines() {
+            document.getElementById('mtrLines').innerHTML = mtrConfig.lines.map(l => `
+                <button onclick="loadMtrStops('${l.code}')" class="fancy-card p-5 rounded-[1.8rem] bg-white shadow-sm border-l-[8px] text-left font-black text-gray-700 active:scale-95 h-24" style="border-color: ${l.color}">
+                    <span class="text-[9px] uppercase opacity-40 block mb-1">${l.code}</span>
+                    <span class="text-lg">${l.name}</span>
+                </button>`).join('');
+        }
+
+        async function loadMtrStops(lineCode) {
+            const line = mtrConfig.lines.find(l => l.code === lineCode);
+            hideAll();
+            document.getElementById('stopListSection').classList.remove('hidden');
+            document.getElementById('stopListTitle').innerText = `${line.name}`;
+            document.getElementById('stopList').innerHTML = mtrConfig.stations[lineCode].map(s => {
+                const docId = `mtr_${lineCode}_${s.c}`;
+                const isFav = window.favorites.some(f => f.id === docId);
+                return `
+                    <div class="fancy-card bg-white p-6 rounded-[2.2rem] shadow-sm flex justify-between items-center border border-gray-100 mb-4">
+                        <div class="flex-1 cursor-pointer" onclick="showMtrETA('${lineCode}', '${s.c}', '${s.n}')">
+                            <span class="font-black text-gray-800 text-xl">${s.n}</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <button id="star-btn-${docId}" onclick="event.stopPropagation(); window.toggleFavorite({type:'mtr', line:'${lineCode}', station:'${s.c}', stationName:'${s.n}', lineName:'${line.name}'})" class="text-3xl ${isFav ? 'text-yellow-400' : 'text-gray-200'} active:scale-125 transition-all">${isFav ? '★' : '☆'}</button>
+                            <div onclick="showMtrETA('${lineCode}', '${s.c}', '${s.n}')" class="bg-blue-500 text-white px-6 py-3 rounded-2xl text-[10px] font-black cursor-pointer shadow-lg active:scale-90 transition-all">ETA</div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        async function showMtrETA(line, sta, staName) {
+            const lineData = mtrConfig.lines.find(l => l.code === line);
+            document.getElementById('modalHeader').style.background = `linear-gradient(135deg, ${lineData.color}, #1e293b)`;
+            document.getElementById('modalRouteName').innerText = lineData.name;
+            document.getElementById('modalStopName').innerText = staName;
+            const content = document.getElementById('etaContent');
+            content.innerHTML = '<div class="py-20 text-center animate-spin rounded-full h-12 w-12 border-b-4 border-gray-300 mx-auto"></div>';
+            document.getElementById('etaModal').classList.remove('hidden');
+            try {
+                const data = await apiFetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line}&sta=${sta}`);
+                if (data.status === 1 && data.data[`${line}-${sta}`]) {
+                    const info = data.data[`${line}-${sta}`];
+                    let html = "";
+                    ['UP', 'DOWN'].forEach(dir => {
+                        if (info[dir]) {
+                            html += `<div class="mb-6"><h4 class="text-[10px] font-black text-gray-400 mb-3 uppercase tracking-[0.2em] px-2">${dir === 'UP' ? '上行' : '下行'}</h4>`;
+                            info[dir].forEach(t => {
+                                const destName = stationLookup[t.dest] || t.dest;
+                                html += `<div class="flex justify-between items-center p-6 bg-white rounded-[2rem] mb-3 border border-gray-100 shadow-sm">
+                                    <div class="font-black text-gray-800 text-base">${t.time.split(' ')[1].substring(0, 5)} <span class="text-red-500 font-black ml-2 text-[10px] bg-red-50 px-2 py-1 rounded-lg">往 ${destName}</span></div>
+                                    <div class="text-blue-600 font-black text-xl">${t.ttnt == 0 ? "到站" : t.ttnt + "分"}</div>
+                                </div>`;
+                            });
+                            html += `</div>`;
+                        }
+                    });
+                    content.innerHTML = html || '<p class="text-center py-20 text-gray-400 font-bold">目前沒有班次數據</p>';
+                } else content.innerHTML = '<p class="text-center py-20 text-gray-400 font-bold">數據更新中...</p>';
+            } catch (e) { content.innerHTML = '<p class="text-center py-20 text-red-400">載入失敗</p>'; }
+        }
+
+        async function searchRoute() {
+            const input = document.getElementById('routeInput').value.trim().toUpperCase();
+            if (!input) return;
+            hideAll(); showStatus(true, `搜尋 ${input} 號巴士...`);
+            try {
+                const res = await apiFetch(`https://data.etabus.gov.hk/v1/transport/kmb/route`);
+                const matched = res?.data?.filter(r => r.route === input);
+                if (matched?.length) {
+                    const grouped = {};
+                    matched.forEach(r => {
+                        const key = `${r.bound}_${r.dest_tc}`;
+                        if (!grouped[key]) grouped[key] = r;
+                        else if (r.service_type < grouped[key].service_type) grouped[key] = r;
+                    });
+                    document.getElementById('directionSection').classList.remove('hidden');
+                    document.getElementById('directionSection').innerHTML = '<h2 class="text-[11px] text-gray-400 font-black px-4 uppercase tracking-widest mb-4">請選擇方向</h2>' + Object.values(grouped).map(r => `
+                        <button onclick="loadBusStops('${r.route}', '${r.bound}', '${r.service_type}', '${r.dest_tc}')" class="fancy-card w-full bg-white p-7 rounded-[2.5rem] shadow-lg flex justify-between items-center mb-5 active:scale-95 group border border-white">
+                            <span class="text-gray-800 text-2xl font-black">${r.dest_tc}</span>
+                            <div class="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center shadow-inner group-hover:bg-red-500 group-hover:text-white transition-all">→</div>
+                        </button>`).join('');
+                    showStatus(false);
+                } else showStatus(true, "❌ 搵唔到呢條線", false);
+            } catch(e) { showStatus(true, "❌ 連線失敗", false); }
+        }
+
+        async function loadBusStops(route, bound, st, dest) {
+            hideAll(); showStatus(true, "載入車站中...");
+            try {
+                const stopsRes = await apiFetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop`);
+                const stopNames = {}; if(stopsRes?.data) stopsRes.data.forEach(s => stopNames[s.stop] = s.name_tc);
+                const routeStops = await apiFetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound==='O'?'outbound':'inbound'}/${st}`);
+                document.getElementById('stopListSection').classList.remove('hidden');
+                document.getElementById('stopListTitle').innerText = `${route} 往 ${dest}`;
+                document.getElementById('stopList').innerHTML = routeStops.data.map((item) => {
+                    const docId = `bus_${route}_${item.stop}`;
+                    const isFav = window.favorites.some(f => f.id === docId);
+                    const sName = stopNames[item.stop] || "未知車站";
+                    return `
+                        <div class="fancy-card bg-white p-6 rounded-[2.2rem] shadow-sm flex justify-between items-center border border-gray-100 mb-4">
+                            <div class="flex-1 cursor-pointer" onclick="showBusETA('${route}', '${item.stop}', '${sName}', '${st}')">
+                                <span class="font-black text-gray-800 text-xl">${sName}</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <button id="star-btn-${docId}" onclick="event.stopPropagation(); window.toggleFavorite({type:'bus', route:'${route}', stopId:'${item.stop}', stopName:'${sName}', bound:'${bound}', serviceType:'${st}'})" class="text-3xl ${isFav ? 'text-yellow-400' : 'text-gray-200'} active:scale-125 transition-all">${isFav ? '★' : '☆'}</button>
+                                <div onclick="showBusETA('${route}', '${item.stop}', '${sName}', '${st}')" class="bg-red-500 text-white px-6 py-3 rounded-2xl text-[10px] font-black cursor-pointer shadow-lg active:scale-90 transition-all">ETA</div>
+                            </div>
+                        </div>`;
+                }).join('');
+                showStatus(false);
+            } catch(e) { showStatus(true, "❌ 載入失敗", false); }
+        }
+
+        async function showBusETA(route, stopId, stopName, st) {
+            document.getElementById('modalHeader').style.background = 'linear-gradient(135deg, #ef4444, #be123c)';
+            document.getElementById('modalRouteName').innerText = `KMB ${route}`;
+            document.getElementById('modalStopName').innerText = stopName;
+            const content = document.getElementById('etaContent');
+            content.innerHTML = '<div class="py-20 text-center animate-spin rounded-full h-12 w-12 border-b-4 border-red-200 mx-auto"></div>';
+            document.getElementById('etaModal').classList.remove('hidden');
+            try {
+                const res = await apiFetch(`https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/${route}/${st}`);
+                const etas = res?.data?.filter(e => e.eta).sort((a,b) => new Date(a.eta) - new Date(b.eta));
+                if (etas?.length) {
+                    content.innerHTML = etas.map((e) => {
+                        const diff = Math.max(0, Math.floor((new Date(e.eta) - new Date()) / 60000));
+                        return `<div class="flex justify-between items-center p-7 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 mb-4">
+                            <div class="text-gray-800 font-black text-2xl">${new Date(e.eta).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                            <div class="text-right"><span class="text-red-500 font-black text-4xl">${diff===0?"到站":diff}</span><span class="text-red-400 text-xs font-black ml-1">${diff===0?"":"分"}</span></div>
+                        </div>`;
+                    }).join('');
+                } else content.innerHTML = '<p class="text-center py-20 text-gray-400 font-bold">目前沒有班次數據</p>';
+            } catch(e) { content.innerHTML = '<p class="text-center py-20 text-red-500 font-bold">獲取失敗</p>'; }
+        }
+
+        // --- Sorting and Preview Logic ---
+        function toggleEditMode() {
+            window.isEditMode = !window.isEditMode;
+            const btn = document.getElementById('editToggleBtn');
+            const text = document.getElementById('editToggleText');
+            btn.classList.toggle('edit-active-bg', window.isEditMode);
+            text.innerText = window.isEditMode ? '完成排序' : '編輯排序';
+            renderFavorites();
+        }
+
+        function renderFavorites() {
+            const list = document.getElementById('favoritesList');
+            if (!window.favorites.length) { document.getElementById('favoritesSection').classList.add('hidden'); return; }
+            document.getElementById('favoritesSection').classList.remove('hidden');
+
+            const sorted = [...window.favorites].sort((a,b) => (a.order || 0) - (b.order || 0));
+
+            list.innerHTML = sorted.map((f, i) => {
+                const displayTitle = f.type === 'mtr' ? f.lineName : f.route;
+                const cardColor = f.type === 'mtr' ? 'blue' : 'red';
+                const clickAction = window.isEditMode ? '' : (f.type==='mtr' ? `showMtrETA('${f.line}','${f.station}','${f.stationName}')` : `showBusETA('${f.route}','${f.stopId}','${f.stopName}','${f.serviceType}')`);
+                
+                return `
+                <div class="favorite-item flex-shrink-0 w-44 bg-white p-5 rounded-[2.5rem] shadow-xl border border-white relative snap-start cursor-pointer flex flex-col justify-between fancy-card ${window.isEditMode ? 'ring-4 ring-blue-100' : ''}" 
+                     style="height: ${window.isEditMode ? '200px' : '155px'}"
+                     onclick="${clickAction}">
+                    
+                    ${window.isEditMode ? `<div class="delete-fav-badge" onclick="event.stopPropagation(); window.toggleFavorite({type:'${f.type}', route:'${f.route || ''}', stopId:'${f.stopId || ''}', line:'${f.line || ''}', station:'${f.station || ''}'})">✕</div>` : ''}
+                    
+                    <div>
+                        <div class="text-${cardColor}-500 font-black text-2xl tracking-tighter">${displayTitle}</div>
+                        <div class="text-gray-800 text-[10px] font-black truncate leading-tight">${f.stationName || f.stopName}</div>
+                    </div>
+
+                    ${window.isEditMode ? `
+                        <div class="flex gap-2 mt-4">
+                            <button onclick="event.stopPropagation(); moveFavorite('${f.id}', -1)" class="flex-1 py-3 bg-slate-50 rounded-2xl border border-gray-100 text-lg active:bg-blue-500 active:text-white transition-all">⬅️</button>
+                            <button onclick="event.stopPropagation(); moveFavorite('${f.id}', 1)" class="flex-1 py-3 bg-slate-50 rounded-2xl border border-gray-100 text-lg active:bg-blue-500 active:text-white transition-all">➡️</button>
+                        </div>
+                    ` : `
+                        <div id="fav-preview-${f.id}" class="mt-2 space-y-1">
+                             <div class="text-[9px] font-black text-gray-300 uppercase tracking-tighter loading-shimmer">FETCHING...</div>
+                        </div>
+                    `}
+                </div>`;
+            }).join('');
+            
+            if (!window.isEditMode) fetchPreviewETAs();
+        }
+
+        async function moveFavorite(id, direction) {
+            const sortedList = [...window.favorites].sort((a,b) => (a.order || 0) - (b.order || 0));
+            const index = sortedList.findIndex(f => f.id === id);
+            const newIndex = index + direction;
+            if (newIndex >= 0 && newIndex < sortedList.length) {
+                const temp = sortedList[index];
+                sortedList[index] = sortedList[newIndex];
+                sortedList[newIndex] = temp;
+                await window.saveNewOrder(sortedList);
+            }
+        }
+
+        async function fetchPreviewETAs() {
+            const sorted = [...window.favorites].sort((a,b) => (a.order || 0) - (b.order || 0));
+            document.getElementById('favLoadingStatus').classList.remove('hidden');
+            
+            for (const f of sorted) {
+                const el = document.getElementById(`fav-preview-${f.id}`);
+                if (!el) continue;
+                try {
+                    let previewHtml = "";
+                    if (f.type === 'mtr') {
+                        const data = await apiFetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${f.line}&sta=${f.station}`);
+                        const info = data.data[`${f.line}-${f.station}`];
+                        const allTrains = [...(info.UP || []), ...(info.DOWN || [])].sort((a,b) => a.ttnt - b.ttnt).slice(0, 2);
+                        previewHtml = allTrains.map(t => `<div class="eta-preview-row"><span>${stationLookup[t.dest] || t.dest}</span><span class="text-blue-500">${t.ttnt}m</span></div>`).join('');
+                    } else {
+                        const res = await apiFetch(`https://data.etabus.gov.hk/v1/transport/kmb/eta/${f.stopId}/${f.route}/${f.serviceType}`);
+                        const etas = res?.data?.filter(e => e.eta).sort((a,b) => new Date(a.eta) - new Date(b.eta)).slice(0, 2);
+                        previewHtml = etas.map(e => {
+                            const diff = Math.max(0, Math.floor((new Date(e.eta) - new Date()) / 60000));
+                            return `<div class="eta-preview-row"><span>往 ${e.dest_tc.substring(0, 3)}</span><span class="text-red-500">${diff}m</span></div>`;
+                        }).join('');
+                    }
+                    el.innerHTML = previewHtml || '<div class="text-[9px] font-bold text-gray-300">NO DATA</div>';
+                } catch (e) { el.innerHTML = '<div class="text-[9px] font-bold text-red-300">ERR</div>'; }
+            }
+            document.getElementById('favLoadingStatus').classList.add('hidden');
+        }
+
+        // --- Utility Functions ---
+        function toggleSyncPanel() { document.getElementById('syncPanel').classList.toggle('hidden'); }
+        function manualSync() {
+            const id = document.getElementById('userIdInput').value.trim();
+            if (id) { localStorage.setItem('bus_sync_id', id); location.reload(); }
+        }
+        function showStatus(show, msg, loading = true) {
+            const box = document.getElementById('statusBox');
+            box.classList.toggle('hidden', !show);
+            document.getElementById('statusText').innerText = msg || '';
+            box.querySelector('.animate-spin').style.display = loading ? 'block' : 'none';
+        }
+        function hideAll() {
+            document.getElementById('directionSection').classList.add('hidden');
+            document.getElementById('stopListSection').classList.add('hidden');
+            document.getElementById('statusBox').classList.add('hidden');
+        }
+        function resetApp() {
+            hideAll();
+            document.getElementById('routeInput').value = "";
+            if (currentMode === 'bus') {
+                document.getElementById('busSearchSection').classList.remove('hidden');
+            } else {
+                document.getElementById('mtrLineSection').classList.remove('hidden');
+            }
+        }
+        function closeModal() { document.getElementById('etaModal').classList.add('hidden'); }
+    </script>
+</body>
+</html>
+</body></html>
